@@ -1,0 +1,18 @@
+# Screenshots taken while checking layouts (screenshot.mjs)
+temporary screenshots/
+
+# Working notes, not part of the site
+prompt.docx
+
+# Source material and local tooling — kept on disk, not published
+brand_assets/
+CLAUDE.md
+serve.mjs
+screenshot.mjs
+
+# OS / editor clutter
+.DS_Store
+Thumbs.db
+desktop.ini
+~$*
+node_modules/
