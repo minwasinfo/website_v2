@@ -133,15 +133,15 @@
             </div>
             <div class="field">
               <label for="b-phone"><span data-i18n="form.phoneWa">Phone / WhatsApp</span> <span class="req">*</span></label>
-              <input class="input" id="b-phone" name="Phone / WhatsApp" type="tel" inputmode="tel" autocomplete="tel" required>
+              <input class="input" id="b-phone" name="Phone / WhatsApp" type="tel" inputmode="tel" autocomplete="tel" maxlength="20" required placeholder="e.g. 98765 43210" data-i18n-attr="placeholder:form.phonePh">
             </div>
             <div class="field">
               <label for="b-email"><span data-i18n="form.email">Email</span> <span class="optional" data-i18n="form.optional">(optional)</span></label>
-              <input class="input" id="b-email" name="Email" type="email" autocomplete="email">
+              <input class="input" id="b-email" name="Email" type="email" inputmode="email" autocomplete="email" placeholder="name@example.com">
             </div>
             <fieldset class="field full">
-              <legend data-i18n="buy.interest">Product of interest</legend>
-              <div class="checks">
+              <legend><span data-i18n="buy.interest">Product of interest</span> <span class="req">*</span></legend>
+              <div class="checks check-group">
                 <label class="check"><input type="checkbox" name="Product of interest" value="HDPE granules"> <span data-i18n="buy.cHdpe">HDPE granules</span></label>
                 <label class="check"><input type="checkbox" name="Product of interest" value="LDPE granules"> <span data-i18n="buy.cLdpe">LDPE granules</span></label>
                 <label class="check"><input type="checkbox" name="Product of interest" value="PP granules"> <span data-i18n="buy.cPp">PP granules</span></label>

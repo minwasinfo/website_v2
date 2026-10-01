@@ -384,6 +384,15 @@ fieldset.field { border: 0; margin: 0; padding: 0; }
 .check input, .consent input { width: 20px; height: 20px; flex-shrink: 0; accent-color: var(--accent); margin: 0; cursor: pointer; }
 .consent { display: flex; gap: 12px; align-items: flex-start; font-size: 14px; color: var(--ink-soft); line-height: 1.5; cursor: pointer; }
 .consent input { margin-top: 2px; }
+.field-error {
+  display: flex; gap: 6px; align-items: flex-start; margin: 2px 0 0;
+  font-size: 14px; font-weight: 500; line-height: 1.45; color: #B3261E;
+}
+.field-error::before { content: '!'; flex-shrink: 0; width: 18px; height: 18px; margin-top: 1px; border-radius: 50%; background: #B3261E; color: #fff; font-size: 12px; font-weight: 700; display: grid; place-items: center; }
+.field.is-invalid .input, .field.is-invalid .input:hover { border-color: #B3261E; background: #FFF8F6; }
+.field.is-invalid .input:focus { box-shadow: 0 0 0 3px rgba(179, 38, 30, 0.18); }
+.field.is-invalid .check { border-color: #E3A39C; }
+.consent.is-invalid input { outline: 2px solid #B3261E; outline-offset: 2px; }
 .captcha-slot:empty { display: none; }
 .captcha-slot { min-height: 78px; }
 .form-card .btn[type="submit"] { width: 100%; }

@@ -10,9 +10,8 @@
     email: 'minwas.info@gmail.com',
     maps: 'https://www.google.com/maps/search/?api=1&query=Vijayapura+District%2C+Karnataka%2C+India',
     linkedin: 'https://www.linkedin.com/company/minwas-advanced-recycling-pvt-ltd',
-    // Free key from https://web3forms.com (enter minwas.info@gmail.com, the key arrives by email).
-    // With a key, forms are emailed directly and protected by hCaptcha.
-    // Without one, forms open the visitor's email app with everything filled in.
+    // Web3Forms access key. Enquiries are emailed to the address the key was created for,
+    // which must be info@minwas.com (create one free at https://web3forms.com; it arrives by email).
     web3formsKey: '',
   };
 
@@ -291,17 +290,88 @@
   }
 
   /* ---------- Enquiry forms ---------- */
+  // Indian numbers: an optional +91 / 91 / 0091 / 0 prefix, then a 10-digit number starting 2–9
+  // (6–9 for mobiles, 2–8 for landlines with STD code). Returns "+91 XXXXX XXXXX" or null.
+  function normalizeIndianPhone(value) {
+    let d = value.replace(/[\s\-().]/g, '');
+    if (!/^\+?\d+$/.test(d)) return null;
+    d = d.replace(/^\+/, '');
+    if (d.length === 14 && d.startsWith('0091')) d = d.slice(4);
+    else if (d.length === 12 && d.startsWith('91')) d = d.slice(2);
+    else if (d.length === 11 && d.startsWith('0')) d = d.slice(1);
+    if (!/^[2-9]\d{9}$/.test(d) || /^(\d)\1{9}$/.test(d)) return null;
+    return `+91 ${d.slice(0, 5)} ${d.slice(5)}`;
+  }
+  const isValidEmail = v => /^[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}$/.test(v) && !/\.\./.test(v);
+
+  const ERRORS = {
+    'form.errRequired': 'Please fill in this field.',
+    'form.errPhone': 'Enter a valid Indian phone number, e.g. 98765 43210 or +91 98765 43210.',
+    'form.errEmail': 'Enter a valid email address, e.g. name@example.com – or leave it empty.',
+    'form.errTickOne': 'Tick at least one option.',
+    'form.errConsent': 'Please tick this box to agree before sending.',
+  };
+
   function initForms() {
     const forms = document.querySelectorAll('form[data-enquiry]');
     if (!forms.length) return;
-    const useApi = Boolean(SITE.web3formsKey);
 
-    if (useApi) {
-      forms.forEach(f => {
-        const slot = f.querySelector('.captcha-slot');
-        if (slot) slot.innerHTML = '<div class="h-captcha" data-captcha="true"></div>';
+    forms.forEach(f => {
+      f.noValidate = true; // our own inline, translated messages replace the browser's tooltips
+      const slot = f.querySelector('.captcha-slot');
+      if (slot) slot.innerHTML = '<div class="h-captcha" data-captcha="true"></div>';
+      // Honeypot: hidden from people, filled in by bots; Web3Forms drops those submissions.
+      f.insertAdjacentHTML('afterbegin', '<input type="checkbox" name="botcheck" class="sr-only" tabindex="-1" autocomplete="off" aria-hidden="true">');
+    });
+    loadScript('https://web3forms.com/client/script.js').catch(() => {});
+
+    // Inline error under a field. The message element carries data-i18n so it follows language switches.
+    function setError(target, key) {
+      const anchor = target.closest('.check-group, .consent') || target;
+      let msg = anchor.nextElementSibling;
+      if (!msg || !msg.classList.contains('field-error')) {
+        if (!key) return;
+        msg = document.createElement('p');
+        msg.className = 'field-error';
+        msg.id = `${target.id || target.name.replace(/\W+/g, '-')}-error`;
+        anchor.after(msg);
+      }
+      const field = anchor.closest('.field, .consent') || anchor;
+      if (!key) { msg.remove(); field.classList.remove('is-invalid'); target.removeAttribute('aria-invalid'); return; }
+      msg.dataset.i18n = key;
+      msg.dataset.orig = ERRORS[key];
+      msg.textContent = t(key, ERRORS[key]);
+      field.classList.add('is-invalid');
+      target.setAttribute('aria-invalid', 'true');
+      target.setAttribute('aria-describedby', msg.id);
+    }
+
+    // Returns the error key for one control, or null when it is fine.
+    function check(el, form) {
+      const v = (el.value || '').trim();
+      if (el.type === 'checkbox' && el.name === 'consent') return el.checked ? null : 'form.errConsent';
+      if (el.matches('.check-group input')) {
+        const group = el.closest('.check-group');
+        return group.querySelector('input:checked') ? null : 'form.errTickOne';
+      }
+      if (el.required && !v) return 'form.errRequired';
+      if (el.type === 'tel' && v && !normalizeIndianPhone(v)) return 'form.errPhone';
+      if (el.type === 'email' && v && !isValidEmail(v)) return 'form.errEmail';
+      return null;
+    }
+
+    function validate(form) {
+      let first = null;
+      const done = new Set();
+      form.querySelectorAll('input:not([name="botcheck"]), select, textarea').forEach(el => {
+        const group = el.closest('.check-group');
+        if (group) { if (done.has(group)) return; done.add(group); }
+        if (el.type === 'checkbox' && !group && el.name !== 'consent') return;
+        const key = check(el, form);
+        setError(group ? group.querySelector('input') : el, key);
+        if (key && !first) first = el;
       });
-      loadScript('https://web3forms.com/client/script.js').catch(() => {});
+      return first;
     }
 
     forms.forEach(form => {
@@ -312,53 +382,72 @@
         status.className = `form-status is-shown ${kind}`;
         status.setAttribute('role', kind === 'err' ? 'alert' : 'status');
       };
+      const hide = () => { status.className = 'form-status'; };
+
+      // Re-check a field as soon as the visitor fixes it (only once it has shown an error).
+      form.addEventListener('input', e => {
+        const el = e.target;
+        const group = el.closest('.check-group');
+        const anchor = group ? group.querySelector('input') : el;
+        if ((anchor.closest('.field, .consent') || anchor).classList.contains('is-invalid')) setError(anchor, check(el, form));
+      });
+      form.querySelectorAll('input[type="tel"]').forEach(el => el.addEventListener('blur', () => {
+        const n = normalizeIndianPhone(el.value);
+        if (n) el.value = n; // show the cleaned-up number so people can see it was understood
+      }));
 
       form.addEventListener('submit', async e => {
         e.preventDefault();
-        if (!form.reportValidity()) return;
-
-        // Collect fields in English (option values and field names are English) so emails read the same in every language.
-        const data = new FormData(form);
-        const rows = [];
-        const seen = new Set();
-        for (const [name] of data) {
-          if (seen.has(name) || name === 'consent' || name.startsWith('h-captcha') || name.startsWith('g-recaptcha')) continue;
-          seen.add(name);
-          const val = data.getAll(name).filter(Boolean).join(', ');
-          if (val) rows.push([name, val]);
-        }
-        const subject = `${form.dataset.enquiry} — ${data.get('Name') || ''}`.trim();
-
-        if (!useApi) {
-          const body = rows.map(([k, v]) => `${k}: ${v}`).join('\n') + `\n\nLanguage: ${LANGS[currentLang].name}`;
-          window.location.href = `mailto:${SITE.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-          show('form.mailto', 'Your email app has opened with your enquiry filled in. Press <strong>Send</strong> in your email app to send it to us.', 'ok');
+        hide();
+        const firstInvalid = validate(form);
+        if (firstInvalid) {
+          show('form.errFix', 'Please correct the fields marked in red.', 'err');
+          firstInvalid.focus({ preventScroll: true });
+          firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
           return;
         }
-
+        const data = new FormData(form);
         if (!data.get('h-captcha-response')) {
           show('form.captcha', 'Please complete the captcha check before sending.', 'err');
           return;
         }
+        if (!SITE.web3formsKey) {
+          console.error('MINWAS forms: SITE.web3formsKey is empty, so enquiries cannot be sent.');
+          show('form.error', 'Your message could not be sent. Please try again, or call or WhatsApp us on +91 86182 08700.', 'err');
+          return;
+        }
+
+        // Field names and option values are English, so the email reads the same whatever language the visitor used.
         const payload = new FormData();
         payload.append('access_key', SITE.web3formsKey);
-        payload.append('subject', subject);
+        payload.append('subject', `${form.dataset.enquiry} — ${data.get('Name') || ''}`.trim());
         payload.append('from_name', 'MINWAS website');
         payload.append('h-captcha-response', data.get('h-captcha-response'));
-        rows.forEach(([k, v]) => payload.append(k, v));
+        if (data.get('botcheck')) payload.append('botcheck', 'on');
+        const seen = new Set(['consent', 'botcheck', 'h-captcha-response', 'g-recaptcha-response']);
+        for (const [name] of data) {
+          if (seen.has(name)) continue;
+          seen.add(name);
+          let val = data.getAll(name).filter(Boolean).join(', ').trim();
+          if (form.querySelector(`[name="${name}"]`)?.type === 'tel') val = normalizeIndianPhone(val) || val;
+          if (val) payload.append(name, val);
+        }
         payload.append('Language', LANGS[currentLang].name);
+        payload.append('Page', location.pathname);
         if (data.get('Email')) payload.append('replyto', data.get('Email'));
 
         button.disabled = true;
         show('form.sending', 'Sending…', 'ok');
         try {
-          const res = await fetch('https://api.web3forms.com/submit', { method: 'POST', body: payload });
+          const res = await fetch('https://api.web3forms.com/submit', { method: 'POST', body: payload, headers: { Accept: 'application/json' } });
           const json = await res.json();
           if (!json.success) throw new Error(json.message);
           form.reset();
           if (window.hcaptcha) window.hcaptcha.reset();
           show('form.success', 'Thank you! Your enquiry has been sent. We typically respond within 24 hours.', 'ok');
         } catch (err) {
+          console.error('MINWAS forms:', err);
+          if (window.hcaptcha) window.hcaptcha.reset();
           show('form.error', 'Your message could not be sent. Please try again, or call or WhatsApp us on +91 86182 08700.', 'err');
         } finally {
           button.disabled = false;
