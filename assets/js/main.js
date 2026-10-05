@@ -319,14 +319,17 @@
     const forms = document.querySelectorAll('form[data-enquiry]');
     if (!forms.length) return;
 
+    // Spam protection without a visible captcha (puzzles drive suppliers away):
+    // a hidden honeypot that only bots fill in, plus a minimum time between page load and sending.
+    // Caught submissions get the normal "thank you" but are never sent, so bots learn nothing.
+    const MIN_FILL_MS = 3000;
+    const shownAt = Date.now();
+    const looksLikeBot = data => data.get('botcheck') || Date.now() - shownAt < MIN_FILL_MS;
+
     forms.forEach(f => {
       f.noValidate = true; // our own inline, translated messages replace the browser's tooltips
-      const slot = f.querySelector('.captcha-slot');
-      if (slot) slot.innerHTML = '<div class="h-captcha" data-captcha="true"></div>';
-      // Honeypot: hidden from people, filled in by bots; Web3Forms drops those submissions.
       f.insertAdjacentHTML('afterbegin', '<input type="checkbox" name="botcheck" class="sr-only" tabindex="-1" autocomplete="off" aria-hidden="true">');
     });
-    loadScript('https://web3forms.com/client/script.js').catch(() => {});
 
     // Inline error under a field. The message element carries data-i18n so it follows language switches.
     function setError(target, key) {
@@ -410,8 +413,9 @@
           return;
         }
         const data = new FormData(form);
-        if (!data.get('h-captcha-response')) {
-          show('form.captcha', 'Please complete the captcha check before sending.', 'err');
+        if (looksLikeBot(data)) {
+          form.reset();
+          show('form.success', 'Thank you! Your enquiry has been sent. We typically respond within 24 hours.', 'ok');
           return;
         }
         if (!SITE.web3formsKey) {
@@ -425,9 +429,7 @@
         payload.append('access_key', SITE.web3formsKey);
         payload.append('subject', `${form.dataset.enquiry} — ${data.get('Name') || ''}`.trim());
         payload.append('from_name', 'MINWAS website');
-        payload.append('h-captcha-response', data.get('h-captcha-response'));
-        if (data.get('botcheck')) payload.append('botcheck', 'on');
-        const seen = new Set(['consent', 'botcheck', 'h-captcha-response', 'g-recaptcha-response']);
+        const seen = new Set(['consent', 'botcheck']);
         for (const [name] of data) {
           if (seen.has(name)) continue;
           seen.add(name);
@@ -446,11 +448,9 @@
           const json = await res.json();
           if (!json.success) throw new Error(json.message);
           form.reset();
-          if (window.hcaptcha) window.hcaptcha.reset();
           show('form.success', 'Thank you! Your enquiry has been sent. We typically respond within 24 hours.', 'ok');
         } catch (err) {
           console.error('MINWAS forms:', err);
-          if (window.hcaptcha) window.hcaptcha.reset();
           show('form.error', 'Your message could not be sent. Please try again, or call or WhatsApp us on +91 86182 08700.', 'err');
         } finally {
           button.disabled = false;

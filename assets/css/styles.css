@@ -393,8 +393,6 @@ fieldset.field { border: 0; margin: 0; padding: 0; }
 .field.is-invalid .input:focus { box-shadow: 0 0 0 3px rgba(179, 38, 30, 0.18); }
 .field.is-invalid .check { border-color: #E3A39C; }
 .consent.is-invalid input { outline: 2px solid #B3261E; outline-offset: 2px; }
-.captcha-slot:empty { display: none; }
-.captcha-slot { min-height: 78px; }
 .form-card .btn[type="submit"] { width: 100%; }
 .form-status { font-size: 15px; padding: 12px 14px; border-radius: var(--radius-sm); display: none; }
 .form-status.is-shown { display: block; }
