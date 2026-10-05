@@ -12,7 +12,7 @@
     linkedin: 'https://www.linkedin.com/company/minwas-advanced-recycling-pvt-ltd',
     // Web3Forms access key. Enquiries are emailed to the address the key was created for,
     // which must be hello@minwas.com (create one free at https://web3forms.com; it arrives by email).
-    web3formsKey: '',
+    web3formsKey: '2b81e991-fa9b-4fd9-b8a6-e8e813593520',
   };
 
   const LANGS = {
