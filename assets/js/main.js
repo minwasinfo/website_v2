@@ -7,11 +7,11 @@
     phone: '+918618208700',
     phoneDisplay: '+91 86182 08700',
     whatsapp: '918618208700',
-    email: 'minwas.info@gmail.com',
+    email: 'hello@minwas.com',
     maps: 'https://www.google.com/maps/search/?api=1&query=Vijayapura+District%2C+Karnataka%2C+India',
     linkedin: 'https://www.linkedin.com/company/minwas-advanced-recycling-pvt-ltd',
     // Web3Forms access key. Enquiries are emailed to the address the key was created for,
-    // which must be info@minwas.com (create one free at https://web3forms.com; it arrives by email).
+    // which must be hello@minwas.com (create one free at https://web3forms.com; it arrives by email).
     web3formsKey: '',
   };
 
