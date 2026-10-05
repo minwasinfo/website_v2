@@ -22,6 +22,9 @@
     mr: { name: 'मराठी', font: 'https://fonts.googleapis.com/css2?family=Anek+Devanagari:wght@500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600&display=swap' },
   };
   const STORE_KEY = 'minwas-lang';
+  // Cache-busting: pages load this file as main.js?v=YYYYMMDD. The same version is reused for the
+  // translation files, so after an update only the ?v= value in the six HTML pages needs changing.
+  const ASSET_VERSION = (document.currentScript && new URL(document.currentScript.src).searchParams.get('v')) || '';
 
   /* ---------- Icons (24px line icons) ---------- */
   const ICONS = {
@@ -245,7 +248,7 @@
     if (lang !== 'en') {
       const font = Promise.race([loadFont(LANGS[lang].font), timeout(1500)]);
       if (!window.MINWAS_I18N[lang]) {
-        try { await loadScript(`assets/i18n/${lang}.js`); } catch (e) { lang = 'en'; }
+        try { await loadScript(`assets/i18n/${lang}.js${ASSET_VERSION ? '?v=' + ASSET_VERSION : ''}`); } catch (e) { lang = 'en'; }
       }
       await font;
     }
